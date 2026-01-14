@@ -48,7 +48,7 @@ You can view the website live here:
 
 For questions or collaborations, contact:  
 **Gregory Kangwa**  
-Email: [your-email@example.com]  
+Email: [gregorykangwa04@gmai.com]  
 
 ---
 
