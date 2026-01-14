@@ -1,0 +1,51 @@
+name: SLSA Generic Generator – Greg's Aroma
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # allows manual trigger
+
+jobs:
+  build-and-attest:
+    name: Build Greg's Aroma Website & Generate Provenance
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Build website artifact (include HTML, CSS, images)
+      - name: Archive website files
+        run: |
+          mkdir -p artifacts
+          zip -r artifacts/gregs-aroma.zip index.html gregs-style.css images/
+
+      # 3. Compute SHA256 hash of artifact
+      - name: Compute artifact hash
+        id: hash
+        run: |
+          sha256sum artifacts/gregs-aroma.zip | awk '{print $1}' > artifact.hash
+          HASH=$(cat artifact.hash)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+      # 4. Generate SLSA Level 3 provenance
+      - name: Generate SLSA Provenance
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.0
+        with:
+          base64-subjects: ${{ steps.hash.outputs.hash }}
+
+      # 5. Upload provenance as artifact
+      - name: Upload provenance file
+        uses: actions/upload-artifact@v3
+        with:
+          name: slsa-provenance
+          path: provenance.jsonl
+
+      # 6. Upload website artifact for download (optional)
+      - name: Upload website artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: gregs-aroma-website
+          path: artifacts/gregs-aroma.zip
