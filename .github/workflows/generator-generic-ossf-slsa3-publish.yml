@@ -1,0 +1,44 @@
+name: SLSA Generic Generator
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # allows you to manually trigger
+
+jobs:
+  build-and-attest:
+    name: Build and generate SLSA provenance
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Build step (for websites, just archive files)
+      - name: Build website artifact
+        run: |
+          mkdir -p artifacts
+          zip -r artifacts/website.zip ./*
+
+      # 3. Compute SHA256 hash of artifact
+      - name: Compute hash
+        id: hash
+        run: |
+          sha256sum artifacts/website.zip | awk '{print $1}' > artifact.hash
+          HASH=$(cat artifact.hash)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+
+      # 4. Generate SLSA Level 3 provenance
+      - name: Generate SLSA Provenance
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.0
+        with:
+          base64-subjects: ${{ steps.hash.outputs.hash }}
+
+      # 5. Upload provenance as artifact
+      - name: Upload provenance
+        uses: actions/upload-artifact@v3
+        with:
+          name: slsa-provenance
+          path: provenance.jsonl
